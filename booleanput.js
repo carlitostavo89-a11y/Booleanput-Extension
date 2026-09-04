@@ -1,4 +1,3 @@
-// Booleanput PACK - v3 marrón (Fix Recolor + Command & Cap Adapters)
 (function(Scratch) {
   'use strict';
 
