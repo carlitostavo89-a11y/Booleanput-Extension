@@ -1,4 +1,4 @@
-// Booleanput PACK - v2 marrón (Fix Recolor Scratch/PenguinMod)
+// Booleanput PACK - v3 marrón (Fix Recolor + Command & Cap Adapters)
 (function(Scratch) {
   'use strict';
 
@@ -52,6 +52,21 @@
             blockType: Scratch.BlockType.REPORTER,
             text: 'a número [INPUT]',
             arguments: { INPUT: { type: Scratch.ArgumentType.BOOLEAN, defaultValue: false } }
+          },
+          {
+            opcode: 'runAsBool',
+            blockType: Scratch.BlockType.BOOLEAN,
+            text: 'ejecutar [SUBSTACK] como booleano',
+            branchCount: 1
+          },
+          {
+            opcode: 'runAsReporter',
+            blockType: Scratch.BlockType.REPORTER,
+            text: 'ejecutar [SUBSTACK] y devolver [RET]',
+            branchCount: 1,
+            arguments: {
+              RET: { type: Scratch.ArgumentType.STRING, defaultValue: 'resultado' }
+            }
           }
         ]
       };
@@ -60,6 +75,20 @@
     bool(args){ return args.INPUT; }
     text(args){ return args.INPUT; }
     number(args){ return args.INPUT; }
+
+    runAsBool(args, util) {
+      if (args.SUBSTACK) {
+        util.startBranch(1, false);
+      }
+      return true;
+    }
+
+    runAsReporter(args, util) {
+      if (args.SUBSTACK) {
+        util.startBranch(1, false);
+      }
+      return args.RET;
+    }
 
     isLight(c){
       if (!c) return false;
@@ -111,7 +140,9 @@
           if (b.setColourSecondary) b.setColourSecondary(colSec);
           if (b.setColourTertiary) b.setColourTertiary(colTert);
 
-          svg?.querySelectorAll('text.blocklyText').forEach(t => {
+          if (typeof b.render === 'function') b.render();
+
+          svg?.querySelectorAll('text.blocklyText, text').forEach(t => {
             t.style.fill = this.isLight(String(col)) ? '#000000' : '#FFFFFF';
           });
         } else {
@@ -119,7 +150,9 @@
           if (b.setColourSecondary) b.setColourSecondary(this.c2);
           if (b.setColourTertiary) b.setColourTertiary(this.c3);
 
-          svg?.querySelectorAll('text.blocklyText').forEach(t => {
+          if (typeof b.render === 'function') b.render();
+
+          svg?.querySelectorAll('text.blocklyText, text').forEach(t => {
             t.style.fill = '#FFFFFF';
           });
         }
