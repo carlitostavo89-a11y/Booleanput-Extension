@@ -1,14 +1,15 @@
-// Booleanput PACK - v2 marrón
+// Booleanput PACK - v2 marrón (Fix Recolor Scratch/PenguinMod)
 (function(Scratch) {
   'use strict';
+
   class Booleanput {
     constructor() {
-      // MARRÓN
       this.c1 = '#8B5E34';
       this.c2 = '#6F4B2A';
       this.c3 = '#5A3D22';
       this.hookWorkspaceRetry(0);
     }
+
     hookWorkspaceRetry(i) {
       try {
         const blocklyObj = typeof Blockly !== 'undefined' ? Blockly : (window.Blockly || null);
@@ -17,12 +18,17 @@
           if (i < 30) setTimeout(() => this.hookWorkspaceRetry(i + 1), 300);
           return;
         }
-        ws.addChangeListener(() => requestAnimationFrame(() => this.recolor()));
+        ws.addChangeListener((e) => {
+          if (e && (e.type === 'move' || e.type === 'change' || e.type === 'endDrag')) {
+            requestAnimationFrame(() => this.recolor());
+          }
+        });
         this.recolor();
       } catch(e) {
         setTimeout(() => this.hookWorkspaceRetry(i + 1), 300);
       }
     }
+
     getInfo() {
       return {
         id: 'booleanput',
@@ -50,6 +56,7 @@
         ]
       };
     }
+
     bool(args){ return args.INPUT; }
     text(args){ return args.INPUT; }
     number(args){ return args.INPUT; }
@@ -57,32 +64,68 @@
     isLight(c){
       if (!c) return false;
       let r,g,b;
-      if (c.startsWith('rgb')){ [r,g,b] = c.match(/\d+/g).map(Number); }
-      else { let h=c.replace('#',''); if(h.length===3)h=h.split('').map(x=>x+x).join(''); r=parseInt(h.substr(0,2),16); g=parseInt(h.substr(2,2),16); b=parseInt(h.substr(4,2),16); }
-      return !isNaN(r) && (0.299*r+0.587*g+0.114*b) > 190;
+      if (c.startsWith('rgb')){ 
+        const match = c.match(/\d+/g);
+        if (!match) return false;
+        [r,g,b] = match.map(Number); 
+      } else { 
+        let h = c.replace('#',''); 
+        if (h.length === 3) h = h.split('').map(x=>x+x).join(''); 
+        r = parseInt(h.substr(0,2),16); 
+        g = parseInt(h.substr(2,2),16); 
+        b = parseInt(h.substr(4,2),16); 
+      }
+      return !isNaN(r) && (0.299*r + 0.587*g + 0.114*b) > 190;
     }
+
     recolor(){
       const blocklyObj = typeof Blockly !== 'undefined' ? Blockly : (window.Blockly || null);
       const ws = blocklyObj?.getMainWorkspace?.();
       if (!ws) return;
-      ws.getAllBlocks(false).filter(b => b.type.startsWith('booleanput_')).forEach(b => {
-        const inputName = Object.keys(b.arguments_ || {INPUT:1})[0] || 'INPUT';
-        const inp = b.getInputTargetBlock(inputName);
+
+      const blocks = ws.getAllBlocks(false).filter(b => b.type && b.type.startsWith('booleanput_'));
+      
+      blocks.forEach(b => {
+        let connectedBlock = null;
+
+        if (b.inputList && b.inputList.length > 0) {
+          for (const inp of b.inputList) {
+            if (inp.connection && inp.connection.targetBlock()) {
+              const target = inp.connection.targetBlock();
+              if (!target.isShadow()) {
+                connectedBlock = target;
+                break;
+              }
+            }
+          }
+        }
+
         const svg = b.getSvgRoot();
-        if (!inp || inp.isShadow()) {
+
+        if (connectedBlock) {
+          const col = connectedBlock.getColour ? connectedBlock.getColour() : (connectedBlock.colour_ || this.c1);
+          const colSec = connectedBlock.getColourSecondary ? connectedBlock.getColourSecondary() : (connectedBlock.colourSecondary_ || col);
+          const colTert = connectedBlock.getColourTertiary ? connectedBlock.getColourTertiary() : (connectedBlock.colourTertiary_ || col);
+
+          b.setColour(col);
+          if (b.setColourSecondary) b.setColourSecondary(colSec);
+          if (b.setColourTertiary) b.setColourTertiary(colTert);
+
+          svg?.querySelectorAll('text.blocklyText').forEach(t => {
+            t.style.fill = this.isLight(String(col)) ? '#000000' : '#FFFFFF';
+          });
+        } else {
           b.setColour(this.c1);
           if (b.setColourSecondary) b.setColourSecondary(this.c2);
           if (b.setColourTertiary) b.setColourTertiary(this.c3);
-          svg?.querySelectorAll('text.blocklyText').forEach(t => t.style.fill = '#FFF');
-          return;
+
+          svg?.querySelectorAll('text.blocklyText').forEach(t => {
+            t.style.fill = '#FFFFFF';
+          });
         }
-        const col = inp.getColour();
-        b.setColour(col);
-        if (b.setColourSecondary) b.setColourSecondary(inp.getColourSecondary());
-        if (b.setColourTertiary) b.setColourTertiary(inp.getColourTertiary());
-        svg?.querySelectorAll('text.blocklyText').forEach(t => t.style.fill = this.isLight(col)? '#000' : '#FFF');
       });
     }
   }
+
   Scratch.extensions.register(new Booleanput());
 })(Scratch);
